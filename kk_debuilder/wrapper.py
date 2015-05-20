@@ -94,6 +94,10 @@ class KKDebuilderTool(object):
                        'host\'s apt proxy configuration.  (This option is passed through to docker-debuild.)')
         p.add_argument('--no-apt-proxy', action='store_const', const=False, dest='apt_proxy',
                        help='Prevent the use of any apt proxy.  (This option is passed through to docker-debuild.)')
+
+        p.add_argument('--no-remove-container', action='store_false', dest='remove_container',
+                       help='Do not automatically remove the container after the build ends.')
+        # TODO: Add an option that lets us skip removing the usually-temporary build directory.
         
         return p
 
@@ -225,6 +229,8 @@ class KKDebuilderTool(object):
                 cmd.append('--no-apt-proxy')
             elif self.args.apt_proxy:
                 cmd.append('--apt-proxy={}'.format(self.args.apt_proxy))
+            if not self.args.remove_container:
+                cmd.append('--no-rm')
             cmd.extend((target_suite, '--'))
             cmd.extend(debuild_args)
 
@@ -232,8 +238,13 @@ class KKDebuilderTool(object):
             p = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
             p.communicate(sys.stdin)
 
+            products = list(self._collect_build_products(tmpdir.pathname))
+            if not any(filepath.endswith('.deb') for filepath in products):
+                # XXX: e.g. you will have only the orig tarball and the .build file
+                raise Exception('Build seems to have failed; no deb packages were produced!')
+            
             self._log.info('Moving build products to output directory...')
-            for filepath in self._collect_build_products(tmpdir.pathname):
+            for filepath in products:
                 filename = os.path.basename(filepath)
                 self._log.info('  - {}'.format(filename))
                 shutil.move(filepath, os.path.join(self.output_path, filename))
