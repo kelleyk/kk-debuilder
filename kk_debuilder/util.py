@@ -11,6 +11,8 @@ import tempfile
 
 
 def realpath(s):
+    if s is None:
+        return s
     return os.path.normpath(os.path.expanduser(s))
 
 
