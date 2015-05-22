@@ -12,7 +12,7 @@ setup(
     url='https://github.com/kelleyk/kk-debuilder',
     packages=find_packages(include='kk_debuilder.*'),
     install_requires=[
-        # 'arrow',
+        'arrow',
         'six',
         # 'intensional',
         
