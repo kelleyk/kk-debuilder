@@ -10,6 +10,10 @@ import shutil
 import tempfile
 
 
+def realpath(s):
+    return os.path.normpath(os.path.expanduser(s))
+
+
 def pack_mode(mode_str, is_file=False, is_dir=False):
     """Converts a human-readable mode string (e.g., 0644) into a
     bit-packed mode.  The keyword arguments set file type flags."""

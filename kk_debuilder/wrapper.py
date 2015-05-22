@@ -20,7 +20,7 @@ else:
 from six import text_type
     
 from . import distro_info
-from .util import TemporaryDirectory
+from .util import TemporaryDirectory, realpath
 
     
 class KKDebuilderTool(object):
@@ -119,13 +119,15 @@ class KKDebuilderTool(object):
 
         # XXX: Make this check more robust.
         # XXX: Check that the repository is clean, too.
-        self.source_repository_path = args.repository or os.getcwd()
+        self.source_repository_path = realpath(args.repository or os.getcwd())
         if not os.path.exists(os.path.join(self.source_repository_path, '.git')):
             raise Exception('Does not appear to be a git repository: {}'.format(self.source_repository_path))
 
-        self.output_path = args.output_path or os.path.dirname(os.getcwd())
+        self.output_path = realpath(args.output_path or os.path.dirname(os.getcwd()))
         if not (os.path.exists(self.output_path) and os.path.isdir(self.output_path)):
             raise Exception('Output path does not exist or is not a directory: {}'.format(self.output_path))
+
+        self.tmp_path = realpath(args.tmp_path)
         
         if args.dry_run:
             self._log.debug('In dry-run mode; stopping here!')
@@ -191,7 +193,7 @@ class KKDebuilderTool(object):
         debuild_args = ('-uc', '-us', '-i', '-I')
         version_suffix = '+{}'.format(target_suite_info.numeric_version)
 
-        with TemporaryDirectory(dir=self.args.tmp_path, suffix='.kk-debuilder') as tmpdir:
+        with TemporaryDirectory(dir=self.tmp_path, suffix='.kk-debuilder') as tmpdir:
 
             self._log.info('Temporary directory for build: {}'.format(tmpdir.pathname))
         
