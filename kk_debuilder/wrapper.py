@@ -46,58 +46,61 @@ class KKDebuilderTool(object):
     def build_parser(self):
         p = argparse.ArgumentParser()
 
-        p.add_argument('--dry-run', action='store_true',
+        g_trouble = p.add_argument_group('troubleshooting')
+        g_trouble.add_argument('--dry-run', action='store_true',
                        help='Print information about what would happen, but do notihng.')
         # The default const is None, which is fine; we just care about the length.
-        p.add_argument('-v', '--verbose', action='append_const', const=None, dest='verbose',
+        g_trouble.add_argument('-v', '--verbose', action='append_const', const=None, dest='verbose',
                        help='Enable more detailed output.  May be specified a second time for debug-level output.')
-        p.add_argument('--verbose-gbp', action='store_true',
+        g_trouble.add_argument('--verbose-gbp', action='store_true',
                        help='Make git-buildpackage verbose, too.  (Enabled by default with -vv.)')
-        
-        p.add_argument('--repo', '--repository', metavar='path', action='store', dest='repository',
+        g_trouble.add_argument('--no-remove-container', action='store_false', dest='remove_container',
+                       help='Do not automatically remove the container after the build ends.')
+        # TODO: Add an option that lets us skip removing the usually-temporary build directory.
+
+        g_path = p.add_argument_group('path selection')
+        g_path.add_argument('--repo', '--repository', metavar='path', action='store', dest='repository',
                        help='Path to git repository from which packages will be built.'
                        '  Default is to use the current working directory.')
-        
-        p.add_argument('--tmp-path', metavar='path', action='store',
+        g_path.add_argument('--tmp-path', metavar='path', action='store',
                        help='Path in which a temporary directory will be created for each build.  If not given, '
                        'the default system location (e.g. /tmp) is used.')
-        p.add_argument('--output-path', metavar='path', action='store',
+        g_path.add_argument('--output-path', metavar='path', action='store',
                        help='Path where successfully-built artifacts will be left.  By default, the parent of the'
                        ' working directory will be used.')
 
-        p.add_argument('--upstream-branch', action='store', metavar='branch-name', default='upstream',
+        g_branch = p.add_argument_group('branch selection')
+        g_branch.add_argument('--upstream-branch', action='store', metavar='branch-name', default='upstream',
                        help='The branch that will be treated as the "upstream version" from the point of view of '
                        'the Debian packaging tools.')
-        p.add_argument('--debian-branch', action='store', metavar='branch-name', default='master',
+        g_branch.add_argument('--debian-branch', action='store', metavar='branch-name', default='master',
                        help='The branch containing the Debianized and packaged version of the software.  This is '
-                       'usually the --upstream-branch with packging information added.')
-        
-        p.add_argument('--target', action='append', dest='target_suites',
+                       'usually the --upstream-branch with packaging information (i.e., the debian/ subdirectory) added.')
+
+        g_target = p.add_argument_group('target selection')
+        g_target.add_argument('--target', action='append', dest='target_suites',
                        help='Manually add one or more suites to the list of targets.'
                        '  May be given multiple times or with a comma-separated list.')
-        p.add_argument('--no-target', metavar='suite(s)', action='append', dest='untarget_suites',
+        g_target.add_argument('--no-target', metavar='suite(s)', action='append', dest='untarget_suites',
                        help='Manually exclude one or more suites from the list of targets.  (This option overrides '
                        'any inclusive options.)  May be given multiple times or with a comma-separated list.')
-        p.add_argument('--all-supported', action='store_true',
+        g_target.add_argument('--all-supported', action='store_true',
                        help='Add any released suite that has not reached EOL (and server EOL, if different) '
                        'to the list of targets.')
-        p.add_argument('--all-since', action='store', metavar='suite-name',
+        g_target.add_argument('--all-since', action='store', metavar='suite-name',
                        help='Add the given suite and any later, released suites to the list of targets.')
-        p.add_argument('--all-unreleased', action='store_true',
+        g_target.add_argument('--all-unreleased', action='store_true',
                        help='Add all not-yet-released suites to the list of targets.')
-        p.add_argument('--allow-no-targets', action='store_true',
+        g_target.add_argument('--allow-no-targets', action='store_true',
                        help='If no target(s) are selected, do not treat the situation as an error.')
 
-        p.add_argument('--apt-proxy', metavar='proxy-url', action='store', default=None, dest='apt_proxy',
+        g_aptproxy = p.add_argument_group('package management')
+        g_aptproxy.add_argument('--apt-proxy', metavar='proxy-url', action='store', default=None, dest='apt_proxy',
                        help='Explicitly specify the URL of an apt proxy that should be used, such as '
                        '"http://10.0.0.1:3142/".  If not given, the default behavior is to use the '
                        'host\'s apt proxy configuration.  (This option is passed through to docker-debuild.)')
-        p.add_argument('--no-apt-proxy', action='store_const', const=False, dest='apt_proxy',
+        g_aptproxy.add_argument('--no-apt-proxy', action='store_const', const=False, dest='apt_proxy',
                        help='Prevent the use of any apt proxy.  (This option is passed through to docker-debuild.)')
-
-        p.add_argument('--no-remove-container', action='store_false', dest='remove_container',
-                       help='Do not automatically remove the container after the build ends.')
-        # TODO: Add an option that lets us skip removing the usually-temporary build directory.
         
         return p
 
