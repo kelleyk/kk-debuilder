@@ -58,6 +58,13 @@ class KKDebuilderTool(object):
                                help='Do not automatically remove the container after the build ends.')
         # TODO: Add an option that lets us skip removing the usually-temporary build directory.
 
+        g_build = p.add_argument_group('build configuration')
+        g_build.add_argument('--source-only', action='store_true',
+                             help='Build only source packages; do not build binary packages.  (This option is '
+                             'appropriate for preparing packages to be uploaded to Launchpad.)')
+        g_build.add_argument('--no-check', action='store_false', dest='check',
+                             help='Skip running Debian tests.  (This option sets DEB_BUILD_OPTIONS=nocheck.)')
+        
         g_path = p.add_argument_group('path selection')
         g_path.add_argument('--repo', '--repository', metavar='path', action='store', dest='repository',
                             help='Path to git repository from which packages will be built.'
@@ -193,9 +200,12 @@ class KKDebuilderTool(object):
         
         # build_tmp_path = '../compton-build'
 
-        debuild_args = ('-uc', '-us', '-i', '-I')
+        debuild_args = ['-uc', '-us', '-i', '-I']
         version_suffix = '+{}'.format(target_suite_info.numeric_version)
 
+        if self.args.source_only:
+            debuild_args.append('-S')
+        
         with TemporaryDirectory(dir=self.tmp_path, suffix='.kk-debuilder') as tmpdir:
 
             self._log.info('Temporary directory for build: {}'.format(tmpdir.pathname))
@@ -236,6 +246,8 @@ class KKDebuilderTool(object):
                 cmd.append('--apt-proxy={}'.format(self.args.apt_proxy))
             if not self.args.remove_container:
                 cmd.append('--no-rm')
+            if not self.args.check:
+                cmd.append('--env=DEB_BUILD_OPTIONS=nocheck')
             cmd.extend((target_suite, '--'))
             cmd.extend(debuild_args)
 
@@ -249,7 +261,7 @@ class KKDebuilderTool(object):
             p.communicate(sys.stdin)
 
             products = list(self._collect_build_products(tmpdir.pathname))
-            if not any(filepath.endswith('.deb') for filepath in products):
+            if not self.args.source_only and not any(filepath.endswith('.deb') for filepath in products):
                 # XXX: e.g. you will have only the orig tarball and the .build file
                 raise Exception('Build seems to have failed; no deb packages were produced!')
             
