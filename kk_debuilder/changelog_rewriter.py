@@ -15,10 +15,20 @@ except ImportError:
     else:
         raise
 
+PY2 = sys.version_info < (3,)
+
     
 def changelog_to_bytes(ch):
+    # # @KK: This is implemented this way, which breaks (bug?) in Python 3.
+    # def write_to_open_file(self, file):
+    #     file.write(self.__str__())
+    
     out = BytesIO()
-    ch.write_to_open_file(out)
+    # ch.write_to_open_file(out)
+    if PY2:
+        out.write(str(ch))
+    else:
+        out.write(bytes(ch))
     return out.getvalue()
 
 
