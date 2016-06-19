@@ -213,6 +213,11 @@ class KKDebuilderTool(object):
             cmd = ['gbp', 'buildpackage']
             cmd.append('--git-debian-branch={}'.format(self.args.debian_branch))
             cmd.append('--git-upstream-branch={}'.format(self.args.upstream_branch))
+
+            # XXX: @KK 2016.06: Without this option, I believe that --git-upstream-branch is simply ignored in favor of
+            # recreating the 'orig' tarball using pristine-tar.
+            cmd.append('--git-no-pristine-tar')
+            
             cmd.extend((
                 '--git-no-ignore-branch',  # (default)
                 '--git-no-submodules',     # (default)
