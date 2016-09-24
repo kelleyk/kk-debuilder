@@ -1,9 +1,4 @@
 #!/usr/bin/env python3.4
-""".
-
-gbp buildpackage --git-debian-branch=master --git-upstream-branch=upstream --git-no-ignore-branch --git-no-submodules --git-postexport='/home/kelleyk/repos/docker-debuild/changelog_modifier/rewrite-in-place.sh debian/changelog utopic +14.10' --git-export-dir=../compton-build --git-purge --git-no-overlay --git-verbose --git-force-create --git-builder=/home/kelleyk/repos/docker-debuild/run-builder.py utopic -- -uc -us -i -I
-"""
-
 import os
 import os.path
 import sys
@@ -34,6 +29,7 @@ class KKDebuilderTool(object):
         '.tar.xz',
         '.tar.bz2',  # should be using xz now
         '.tar.gz',   # should be using xz now
+        # '.udeb', ?
     }
     
     def __init__(self, *args, **kwargs):
@@ -56,7 +52,6 @@ class KKDebuilderTool(object):
                                help='Make git-buildpackage verbose, too.  (Enabled by default with -vv.)')
         g_trouble.add_argument('--no-remove-container', action='store_false', dest='remove_container',
                                help='Do not automatically remove the container after the build ends.')
-        # TODO: Add an option that lets us skip removing the usually-temporary build directory.
 
         g_build = p.add_argument_group('build configuration')
         g_build.add_argument('--source-only', action='store_true',
@@ -83,6 +78,9 @@ class KKDebuilderTool(object):
         g_branch.add_argument('--debian-branch', action='store', metavar='branch-name', default='master',
                               help='The branch containing the Debianized and packaged version of the software.  This is '
                               'usually the --upstream-branch with packaging information (i.e., the debian/ subdirectory) added.')
+        g_branch.add_argument('--pristine-tar', action='store_true',
+                              help='If true, use pristine-tar *if available* and ignore --upstream-branch.  If false, '
+                              'ignore pristine-tar and generate the upstream tarball from --upstream-branch instead.')
 
         g_target = p.add_argument_group('target selection')
         g_target.add_argument('--target', action='append', dest='target_suites',
@@ -108,6 +106,18 @@ class KKDebuilderTool(object):
                                 'host\'s apt proxy configuration.  (This option is passed through to docker-debuild.)')
         g_aptproxy.add_argument('--no-apt-proxy', action='store_const', const=False, dest='apt_proxy',
                                 help='Prevent the use of any apt proxy.  (This option is passed through to docker-debuild.)')
+
+        g_apt = p.add_argument_group('package sources')
+        g_apt.add_argument('--apt-source', action='append',
+                           help='A package source, in the format of a line from an apt sources.list file.')
+        g_apt.add_argument('--apt-key-id', action='append',  # specify keyserver?
+                           help='The ID of a key that should be trusted to sign package repositories; the key will be fetched from keyserver.ubuntu.com.')
+        g_apt.add_argument('--apt-key-url', action='append',
+                           help='The URL of a key that should be trustted to sign package repositories.')
+
+        g_adv = p.add_argument_group('advanced options')
+        g_adv.add_argument('--docker-arg', action='append',
+                           help='Specify an argument that will be passed to "docker run".')
         
         return p
 
@@ -215,8 +225,14 @@ class KKDebuilderTool(object):
             cmd.append('--git-upstream-branch={}'.format(self.args.upstream_branch))
 
             # XXX: @KK 2016.06: Without this option, I believe that --git-upstream-branch is simply ignored in favor of
-            # recreating the 'orig' tarball using pristine-tar.
-            cmd.append('--git-no-pristine-tar')
+            # recreating the 'orig' tarball using pristine-tar.  However, sometimes we really do want to use pristine-tar.
+            if not self.args.pristine_tar:
+                self._log.warning('Since the --pristine-tar flag was not given, pristine-tar will be ignored.')
+                cmd.append('--git-no-pristine-tar')
+            else:
+                cmd.append('--git-pristine-tar')
+                self._log.warning('The --pristine-tar flag was given; if a pristine-tar tarball is available, it will be used.')
+                # TODO: Assert that we aren't using both this flag and --upstream-branch?
             
             cmd.extend((
                 '--git-no-ignore-branch',  # (default)
@@ -236,14 +252,20 @@ class KKDebuilderTool(object):
                 '--version-suffix', version_suffix,
                 'debian/changelog',
                 target_suite,
-                ))))
+            ))))
 
             cmd.append('--git-export-dir={}'.format(tmpdir.pathname))
 
             if self.verbose_gbp:
                 cmd.extend(('--git-verbose',))
 
-            cmd.extend(('--git-builder=docker-debuild',))
+            git_builder_cmd = ['docker-debuild']
+            git_builder_cmd.extend('--apt-source={}'.format(s) for s in (self.args.apt_source or ()))
+            git_builder_cmd.extend('--apt-key-id={}'.format(s) for s in (self.args.apt_key_id or()))
+            git_builder_cmd.extend('--apt-key-url={}'.format(s) for s in (self.args.apt_key_url or ()))
+            git_builder_cmd.extend('--docker-arg={}'.format(s) for s in (self.args.docker_arg or ()))
+            cmd.append('--git-builder={}'.format(' '.join(shell_quote(s) for s in git_builder_cmd)))
+            
             # Any arguments that gbp buildpackage doesn't recognize will be passed to our --git-builder.
             if self.args.apt_proxy is False:
                 cmd.append('--no-apt-proxy')
@@ -280,11 +302,16 @@ class KKDebuilderTool(object):
         for name in os.listdir(path):
             if any(name.endswith(suffix) for suffix in self.BUILD_PRODUCT_SUFFIXES):
                 yield os.path.join(path, name)
-            
+            else:
+                self._log.debug('Ignoring file that does not seem to be a build product (based on suffix): {}'.format(name))
         
 def main():
+    # We configure the actual logging level on the sublogger that the KKDebuilderTool class uses; this just needs to
+    # pass on anything that we choose to emit.
+    logging.basicConfig(level=logging.DEBUG)
+    
     KKDebuilderTool().main()
 
-    
+   
 if __name__ == '__main__':
     main()
