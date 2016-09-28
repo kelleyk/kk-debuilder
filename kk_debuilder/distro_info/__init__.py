@@ -1,5 +1,6 @@
 import re
 import csv
+import os.path
 from six import text_type
 from io import StringIO as TextIO   # XXX: Py2 equivalent?
 
@@ -54,10 +55,14 @@ class DistroVersion(dict):
     def released(self):
         return self.release < arrow.utcnow().date()
     
+
+def get_bundled_distro_info_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ubuntu.csv')
+
     
-def get_ubuntu_distro_info(path=DEFAULT_UBUNTU_DISTRO_INFO_PATH):
-    with open(path, 'r') as f:
-        return parse_distro_info(f.read())
+def get_ubuntu_distro_info(path=DEFAULT_UBUNTU_DISTRO_INFO_PATH, fallback=True):
+        with open(path, 'r') as f:
+            return parse_distro_info(f.read())
 
         
 def parse_distro_info(data):

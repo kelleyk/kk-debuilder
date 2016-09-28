@@ -20,6 +20,8 @@ from .util import TemporaryDirectory, realpath
     
 class KKDebuilderTool(object):
 
+    _suite_info = None
+    
     BUILD_PRODUCT_SUFFIXES = {
         '.deb',
         '.ddeb',
@@ -121,6 +123,22 @@ class KKDebuilderTool(object):
         
         return p
 
+    @property
+    def suite_info(self):
+        if self._suite_info is None:
+            try:
+                ubuntu_distro_info = distro_info.get_ubuntu_distro_info()
+            except IOError as exc:
+                if exc.errno == 2:
+                    self._log.warn('Falling back to bundled Ubuntu distro information.  (This is normal on a '
+                                   'non-Ubuntu system.)')
+                    ubuntu_distro_info = distro_info.get_ubuntu_distro_info(
+                        distro_info.get_bundled_distro_info_path())
+                else:
+                    raise
+            self._suite_info = {x.series: x for x in ubuntu_distro_info}
+        return self._suite_info
+    
     def main(self, argv=None):
         argv = argv or sys.argv
         self.args = args = self.build_parser().parse_args(argv[1:])
@@ -133,9 +151,8 @@ class KKDebuilderTool(object):
             self._log.debug('Enabled verbose output!')
 
         self.verbose_gbp = args.verbose_gbp or self.verbosity >= 2
-       
-        self.suite_info = suite_info = {x.series: x for x in distro_info.get_ubuntu_distro_info()}
-        targets = self._parse_target_options(args, suite_info)
+
+        targets = self._parse_target_options(args, self.suite_info)
 
         # XXX: Make this check more robust.
         # XXX: Check that the repository is clean, too.

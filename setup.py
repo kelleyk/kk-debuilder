@@ -11,14 +11,12 @@ setup(
     author_email='kelleyk@kelleyk.net',
     url='https://github.com/kelleyk/kk-debuilder',
     packages=find_packages(include='kk_debuilder.*'),
+    include_package_data=True,
     install_requires=[
         'arrow',
         'six',
-        # 'intensional',
-        
-        ### requires by gbp fork;
-        ### requires kelleyk/docker-debuild
-        
+        # requires my gbp fork;
+        # requires kelleyk/docker-debuild
     ],
     entry_points={
         'console_scripts': [

@@ -55,3 +55,7 @@ into
     compton (0.1~beta3~1.git0e0b35a-kk1+15.10) wily; urgency=medium
     compton (0.1~beta3~1.git0e0b35a-kk1+15.04) vivid; urgency=medium
     ...
+
+## TODO
+
+- It'd be nice to also support Debian suite names (instead of only Ubuntu ones).
