@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euf -o pipefail
+
+docker run -v /var/run/docker.sock:/var/run/docker.sock kelleyk/kk-debuilder:latest kk-debuilder "$@"
