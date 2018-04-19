@@ -32,6 +32,7 @@ class KKDebuilderTool(object):
         '.tar.bz2',  # should be using xz now
         '.tar.gz',   # should be using xz now
         # '.udeb', ?
+        '.buildinfo',  # as of artful
     }
     
     def __init__(self, *args, **kwargs):
