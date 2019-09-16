@@ -14,15 +14,16 @@ class DistroVersion(dict):
     def __init__(self, *args, **kwargs):
         super(DistroVersion, self).__init__(*args, **kwargs)
         
-        assert set(self) == set('version,codename,series,created,release,eol,eol-server'.split(','))
-        assert all(((k == 'eol-server' and v is None) or v == v.strip())
+        assert set(self).issuperset(set('version,codename,series,created,release,eol,eol-server'.split(',')))
+        assert set(self).issubset(set('version,codename,series,created,release,eol,eol-server,eol-esm'.split(',')))
+        assert all(((k in ('eol-server', 'eol-esm') and v is None) or v == v.strip())
                    for k, v in self.items())
         # 'codename' might be e.g. 'Trusty Tahr'; 'series' will be e.g. 'trusty'.  'series' is
         # roughly synonymous with distribution or release.
         assert re.match(r'^[a-z]+$', self.series)
 
         # Convert these to dates.
-        for key in ('created', 'release', 'eol', 'eol-server'):
+        for key in ('created', 'release', 'eol', 'eol-server', 'eol-esm'):
             v = self[key]
             if v is not None:
                 self[key] = arrow.get(v).date()
