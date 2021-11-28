@@ -13,7 +13,7 @@ setup(
     packages=find_packages(include='kk_debuilder.*'),
     include_package_data=True,
     install_requires=[
-        'arrow',
+        'arrow<1.0.0',  # 1.0.0 dropped support for Python 2.x
         'six',
         # requires my gbp fork;
         # requires kelleyk/docker-debuild
